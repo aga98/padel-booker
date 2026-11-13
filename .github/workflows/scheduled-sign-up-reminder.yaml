@@ -19,7 +19,7 @@ jobs:
           echo "TARGET_DATE=$TARGET_DATE" >> "$GITHUB_ENV"
           echo "TARGET_WEEKDAY=$TARGET_WEEKDAY" >> "$GITHUB_ENV"
 
-      - name: Send Telegram Message
+      - name: Send Telegram Reminder & Poll
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -31,36 +31,52 @@ jobs:
           import os
           import urllib.request
 
+          bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
+          chat_id = os.environ["TELEGRAM_CHAT_ID"]
           weekday = os.environ["TARGET_WEEKDAY"]
           date_str = os.environ["TARGET_DATE"]
+
+          def post_telegram(method: str, payload: dict) -> None:
+              data = json.dumps(payload).encode("utf-8")
+              req = urllib.request.Request(
+                  f"https://api.telegram.org/bot{bot_token}/{method}",
+                  data=data,
+                  headers={"Content-Type": "application/json"},
+                  method="POST",
+              )
+              with urllib.request.urlopen(req, timeout=15) as resp:
+                  body = json.loads(resp.read().decode())
+                  if not body.get("ok"):
+                      raise RuntimeError(f"Telegram API error ({method}): {body}")
 
           text = (
               f"🎾 <b>Sign Up: Pádel for {weekday} {date_str}, 18:00-19:30 (2 Courts, 8 People)</b> 🎾\n"
               "━━━━━━━━━━━━━━━\n\n"
-              "🤑 <b>Payment Instructions:</b>\n"
-              'Please pay now by signing in to the <a href="https://padel7santmarti.com/Login.aspx">Padel7 shared account</a> '
-              'and recharging the wallet with <b>€12.00</b> in the <i>"Control de Saldo"</i> section.\n\n'
-              "💬 <b>Please reply to this message once you've paid (or react with ✅).</b> "
-              "Based on the number of people, we will reduce courts if necessary (e.g., if fewer than 8, it will be 1 court).\n\n"
+              "1️⃣ <b>Claim your spot</b> in the poll below (first 8 votes get priority).\n"
+              "2️⃣ <b>Pay €12.00:</b> Sign in to the "
+              '<a href="https://padel7santmarti.com/Login.aspx">Padel7 shared account</a> '
+              'and recharge the wallet in <i>"Control de Saldo"</i>.\n'
+              "3️⃣ <b>Confirm payment:</b> React with ✅ on this message (or reply) once you've paid.\n\n"
+              "Based on the final headcount, we will adjust to 1 court if fewer than 8 sign up.\n\n"
           )
 
-          payload = json.dumps({
-              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+          post_telegram("sendMessage", {
+              "chat_id": chat_id,
               "text": text,
               "parse_mode": "HTML",
               "disable_web_page_preview": True,
-          }).encode("utf-8")
+          })
 
-          req = urllib.request.Request(
-              f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage",
-              data=payload,
-              headers={"Content-Type": "application/json"},
-              method="POST",
-          )
+          post_telegram("sendPoll", {
+              "chat_id": chat_id,
+              "question": f"🎾 Pádel {weekday} {date_str} (18:00-19:30) — Are you in?",
+              "options": [
+                  {"text": "✅ I'm in (€12)"},
+                  {"text": "❌ Out this week"},
+              ],
+              "is_anonymous": False,
+              "allows_multiple_answers": False,
+          })
 
-          with urllib.request.urlopen(req, timeout=15) as resp:
-              body = json.loads(resp.read().decode())
-              if not body.get("ok"):
-                  raise RuntimeError(f"Telegram API error: {body}")
-              print("Message sent successfully!")
+          print("Reminder message and sign-up poll sent successfully!")
           EOF
