@@ -18,14 +18,15 @@ def login_to_site(username: str, password: str, env: str) -> webdriver.Chrome:
 
         wait = WebDriverWait(driver, 15)
 
-        # 1. Dismiss Cookie Banner using JavaScript (bypasses UI intercept)
+        # 1. Dismiss Cookie Banner quickly (3s max so a missing banner never stalls midnight bookings)
         try:
-            refuse_cookies_button = wait.until(
+            refuse_cookies_button = WebDriverWait(driver, 3).until(
                 EC.presence_of_element_located((By.ID, settings.LOGIN_REFUSE_COOKIES_BUTTON_ID))
             )
             driver.execute_script("arguments[0].click();", refuse_cookies_button)
-        except Exception as e:
-            logging.warning("Cookie banner not found or already closed: %s", e)
+        except TimeoutException:
+            logging.debug("Cookie banner did not appear within 3s; continuing.")
+
 
         # 2. Wait briefly for the overlay to vanish; remove via JS if left orphaned
         try:
