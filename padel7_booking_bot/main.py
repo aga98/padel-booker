@@ -61,10 +61,10 @@ def main(court_preferences: CourtPreferences, env: settings.AppSettings) -> None
         driver.quit()
 
     if settings.NOTIFICATION_ENABLED:
-        webhook_url = env.app_slack_test_webhook_url if settings.DRY_RUN else env.app_slack_prod_webhook_url
+        chat_id = env.app_telegram_test_chat_id if settings.DRY_RUN else env.app_telegram_prod_chat_id
         notifications.send_booking_notification(
-            webhook_url,
-            env.app_slack_token,
+            env.app_telegram_bot_token,
+            chat_id,
             booking_details,
             booking_successful,
         )
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--notifications",
         action="store_true",
-        help="Enable Slack notifications.",
+        help="Enable Telegram notifications.",
         default=settings.NOTIFICATION_ENABLED,
     )
     parser.add_argument(

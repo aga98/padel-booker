@@ -13,11 +13,32 @@ import selenium.common.exceptions
 from bot.types import BookingDetails, CourtPreferences
 
 
+def _dismiss_overlays(driver: webdriver.Chrome) -> None:
+    try:
+        refuse_btn = WebDriverWait(driver, 2).until(
+            EC.presence_of_element_located((By.ID, settings.LOGIN_REFUSE_COOKIES_BUTTON_ID))
+        )
+        driver.execute_script("arguments[0].click();", refuse_btn)
+    except selenium.common.exceptions.TimeoutException:
+        pass
+
+    try:
+        WebDriverWait(driver, 5).until(
+            EC.invisibility_of_element_located((By.CLASS_NAME, "banner-block-screen"))
+        )
+    except selenium.common.exceptions.TimeoutException:
+        logging.debug("Overlay banner-block-screen remained in DOM; removing via JS.")
+        driver.execute_script(
+            "document.querySelectorAll('.banner-block-screen').forEach(el => el.remove());"
+        )
+
+
 def _navigate_to_date(driver: webdriver.Chrome, booking_url: str, book_date: datetime) -> None:
     driver.get(booking_url)
     logging.debug("Going to booking page: %s", booking_url)
     wait = WebDriverWait(driver, 10)
-    time.sleep(2)
+
+    _dismiss_overlays(driver)
 
     date_label = wait.until(EC.element_to_be_clickable((By.ID, "labelFechaActual")))
     date_label.click()
@@ -104,7 +125,7 @@ def _complete_booking(driver: webdriver.Chrome) -> bool:
 
 
 def book_court(
-    driver: webdriver.Chrome, court_preferences: CourtPreferences
+        driver: webdriver.Chrome, court_preferences: CourtPreferences
 ) -> tuple[BookingDetails, bool]:
     venue_config = court_preferences["venue_config"]
     booking_successful = False

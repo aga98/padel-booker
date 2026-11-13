@@ -33,7 +33,7 @@ tasks:
     desc: Build the Docker image
     dir: padel7_booking_bot
     cmds:
-      - docker build -t {{.IMAGE_NAME}}:{{.IMAGE_TAG}} .
+      - docker build --load -t {{.IMAGE_NAME}}:{{.IMAGE_TAG}} .
 
   docker:dry-run:
     desc: Run Docker container in dry-run mode with mounted volumes

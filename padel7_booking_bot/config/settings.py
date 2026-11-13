@@ -4,12 +4,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
+    env: str = "docker"  # or local
     app_username: str
     app_password: str
-    app_slack_token: str = ""
-    app_slack_prod_webhook_url: str = ""
-    app_slack_test_webhook_url: str = ""
-    env: str = "docker"  # or local
+    app_telegram_bot_token: str = ""
+    app_telegram_prod_chat_id: str = ""
+    app_telegram_test_chat_id: str = ""
 
 
 # GLOBAL SETTINGS
@@ -18,7 +18,7 @@ TIMEOUT = 10  # Default timeout for Selenium waits
 LOGGING_LEVEL = "INFO"  # Logging level for the bot
 SCREENSHOT_DIR = "screenshots"  # Directory to save screenshots
 DRY_RUN = True  # Set to True to simulate the booking process without actually booking a court
-NOTIFICATION_ENABLED = False  # Set to True to enable Slack notifications
+NOTIFICATION_ENABLED = True  # Set to True to enable Slack notifications
 
 # LOGIN SETTINGS
 LOGIN_URL = BASE_URL + "/Login.aspx"
