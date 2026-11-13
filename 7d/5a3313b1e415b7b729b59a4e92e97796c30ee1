@@ -1,0 +1,24 @@
+padel7_booking_bot/bot/login.py
+  s_14a66003e604d2::t_b2f3ace69e0eef 21,23,27-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7d5a3313b1e415b7b729b59a4e92e97796c30ee1",
+  "prompts": {},
+  "humans": {
+    "h_cc4da17930ae27": {
+      "author": "Alberto Gimenez <algimeneza@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_14a66003e604d2": {
+      "agent_id": {
+        "tool": "github-copilot-jetbrains",
+        "id": "1794595323909",
+        "model": "unknown"
+      },
+      "human_author": "Alberto Gimenez <algimeneza@gmail.com>"
+    }
+  }
+}
