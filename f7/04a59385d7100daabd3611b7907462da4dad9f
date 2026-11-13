@@ -1,0 +1,24 @@
+.github/workflows/scheduled-sign-up-reminder.yaml
+  s_14a66003e604d2::t_cf5287dc7d7c68 1-2,5-7,16-17,19-20,22,24-27,29-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f704a59385d7100daabd3611b7907462da4dad9f",
+  "prompts": {},
+  "humans": {
+    "h_cc4da17930ae27": {
+      "author": "Alberto Gimenez <algimeneza@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_14a66003e604d2": {
+      "agent_id": {
+        "tool": "github-copilot-jetbrains",
+        "id": "1794595323909",
+        "model": "unknown"
+      },
+      "human_author": "Alberto Gimenez <algimeneza@gmail.com>"
+    }
+  }
+}
