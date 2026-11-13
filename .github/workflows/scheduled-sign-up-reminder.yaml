@@ -1,45 +1,66 @@
-name: "[Scheduled] Sign up Slack reminder"
+name: "[Scheduled] Sign up Telegram reminder"
+
 on:
   schedule:
-    - cron: "12 10 * * THU"
+    # Runs every Thursday at 09:00 UTC (10:00 CET / 11:00 CEST in Barcelona)
+    - cron: "0 9 * * THU"
+  workflow_dispatch:
 
 jobs:
   send_message:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Set Date and Time Variables
         run: |
-          TARGET_DATE=$(date -u -d "+12 days" +"%d/%m/%Y")
-          TARGET_WEEKDAY=$(date -u -d "+12 days" +"%A")
+          TARGET_DATE=$(TZ="Europe/Madrid" date -d "+12 days" +"%d/%m/%Y")
+          TARGET_WEEKDAY=$(TZ="Europe/Madrid" date -d "+12 days" +"%A")
           echo "Target date: $TARGET_WEEKDAY $TARGET_DATE"
-          echo "TARGET_DATE=$TARGET_DATE" >> $GITHUB_ENV
-          echo "TARGET_WEEKDAY=$TARGET_WEEKDAY" >> $GITHUB_ENV
+          echo "TARGET_DATE=$TARGET_DATE" >> "$GITHUB_ENV"
+          echo "TARGET_WEEKDAY=$TARGET_WEEKDAY" >> "$GITHUB_ENV"
 
-      - name: Replace Placeholders in JSON
+      - name: Send Telegram Message
         env:
-            TARGET_DATE: ${{ env.TARGET_DATE }}
-            TARGET_WEEKDAY: ${{ env.TARGET_WEEKDAY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TARGET_DATE: ${{ env.TARGET_DATE }}
+          TARGET_WEEKDAY: ${{ env.TARGET_WEEKDAY }}
         run: |
-          export USER=$(echo ${{secrets.APP_USERNAME}} | sed 's/./& /g' | sed 's/ //g')
-          export PASSWORD=$(echo ${{secrets.APP_PASSWORD}} | sed 's/./& /g' | sed 's/ //g')
-          MESSAGE_JSON=$(cat .github/utils/message_template.json |
-          sed "s#\$WEEK_DAY#${TARGET_WEEKDAY}#g" |
-          sed "s#\$DATE#${TARGET_DATE}#g" |
-          sed "s#\$USER#${USER}#g" |
-          sed "s#\$PASSWORD#${PASSWORD}#g")
-          echo "$MESSAGE_JSON" > /tmp/slack_message.json
-          cat /tmp/slack_message.json
+          python3 - << 'EOF'
+          import json
+          import os
+          import urllib.request
 
-      - name: Send Slack Message
-        uses: slackapi/slack-github-action@v2.0.0
-        with:
-          errors: true
-          webhook: ${{ secrets.APP_SLACK_PROD_WEBHOOK_URL }}
-          webhook-type: webhook-trigger
-          payload-file-path: "/tmp/slack_message.json"
+          weekday = os.environ["TARGET_WEEKDAY"]
+          date_str = os.environ["TARGET_DATE"]
+
+          text = (
+              f"🎾 <b>Sign Up: Pádel for {weekday} {date_str}, 18:00-19:30 (2 Courts, 8 People)</b> 🎾\n"
+              "━━━━━━━━━━━━━━━\n\n"
+              "🤑 <b>Payment Instructions:</b>\n"
+              'Please pay now by signing in to the <a href="https://padel7santmarti.com/Login.aspx">Padel7 shared account</a> '
+              'and recharging the wallet with <b>€12.00</b> in the <i>"Control de Saldo"</i> section.\n\n'
+              "💬 <b>Please reply to this message once you've paid (or react with ✅).</b> "
+              "Based on the number of people, we will reduce courts if necessary (e.g., if fewer than 8, it will be 1 court).\n\n"
+          )
+
+          payload = json.dumps({
+              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+              "text": text,
+              "parse_mode": "HTML",
+              "disable_web_page_preview": True,
+          }).encode("utf-8")
+
+          req = urllib.request.Request(
+              f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/sendMessage",
+              data=payload,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+
+          with urllib.request.urlopen(req, timeout=15) as resp:
+              body = json.loads(resp.read().decode())
+              if not body.get("ok"):
+                  raise RuntimeError(f"Telegram API error: {body}")
+              print("Message sent successfully!")
+          EOF
