@@ -1,0 +1,37 @@
+padel7_booking_bot/config/settings.py
+  h_cc4da17930ae27 7,21
+  s_14a66003e604d2::t_17518bd7dce6df 10-12
+padel7_booking_bot/bot/booking.py
+  s_14a66003e604d2::t_e1f94abffc3a3c 16-35,40-41,128
+padel7_booking_bot/bot/login.py
+  s_14a66003e604d2::t_95205980a0edf1 6,31-39,77
+  s_14a66003e604d2::t_362ea19996ffa3 30
+  s_14a66003e604d2::t_6aec0af44be83a 19,43,50,55-60,62,75
+padel7_booking_bot/main.py
+  s_14a66003e604d2::t_f45b1a4c10a324 64,66-67,107
+padel7_booking_bot/bot/notifications.py
+  s_14a66003e604d2::t_06fd4febd8c193 1,3,8-12,14-20,23-25,27-42,46-49,51-62,65-67,70,72,74
+Taskfile.yaml
+  s_14a66003e604d2::t_d6a17d204ca698 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "317e3a3036f7e74cbbe1e32cb66bbb7292ccd17a",
+  "prompts": {},
+  "humans": {
+    "h_cc4da17930ae27": {
+      "author": "Alberto Gimenez <algimeneza@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_14a66003e604d2": {
+      "agent_id": {
+        "tool": "github-copilot-jetbrains",
+        "id": "1794595323909",
+        "model": "unknown"
+      },
+      "human_author": "Alberto Gimenez <algimeneza@gmail.com>"
+    }
+  }
+}
