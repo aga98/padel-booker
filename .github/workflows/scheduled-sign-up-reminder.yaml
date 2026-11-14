@@ -5,6 +5,11 @@ on:
     # Runs every Thursday at 09:00 UTC (10:00 CET / 11:00 CEST in Barcelona)
     - cron: "0 9 * * THU"
   workflow_dispatch:
+    inputs:
+      test_mode:
+        description: "Send to test chat instead of the prod group"
+        type: boolean
+        default: true
 
 jobs:
   send_message:
@@ -22,7 +27,7 @@ jobs:
       - name: Send Telegram Reminder & Poll
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID: ${{ (github.event_name == 'workflow_dispatch' && inputs.test_mode) && vars.TELEGRAM_TEST_CHAT_ID || secrets.TELEGRAM_CHAT_ID }}
           TARGET_DATE: ${{ env.TARGET_DATE }}
           TARGET_WEEKDAY: ${{ env.TARGET_WEEKDAY }}
         run: |
@@ -31,10 +36,13 @@ jobs:
           import os
           import urllib.request
 
-          bot_token = os.environ["TELEGRAM_BOT_TOKEN"]
-          chat_id = os.environ["TELEGRAM_CHAT_ID"]
+          bot_token = os.environ["TELEGRAM_BOT_TOKEN"].strip()
+          chat_id = os.environ["TELEGRAM_CHAT_ID"].strip()
           weekday = os.environ["TARGET_WEEKDAY"]
           date_str = os.environ["TARGET_DATE"]
+
+          if not bot_token or not chat_id:
+              raise ValueError("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID.")
 
           def post_telegram(method: str, payload: dict) -> None:
               data = json.dumps(payload).encode("utf-8")

@@ -2,7 +2,7 @@ name: "[Scheduled] Monday match-eve Telegram reminder"
 
 on:
   schedule:
-    # Runs every Monday at 17:00 UTC (18:00 CET / 19:00 CEST in Barcelona)
+    # Runs every Monday at 18:00 UTC (19:00 CET / 20:00 CEST in Barcelona)
     - cron: "0 18 * * MON"
   workflow_dispatch:
     inputs:
@@ -27,7 +27,7 @@ jobs:
       - name: Send Telegram Reminder
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ (github.event_name == 'workflow_dispatch' && inputs.test_mode) && vars.TELEGRAM_TEST_CHAT_ID || vars.TELEGRAM_PROD_CHAT_ID }}
+          TELEGRAM_CHAT_ID: ${{ (github.event_name == 'workflow_dispatch' && inputs.test_mode) && secrets.TELEGRAM_TEST_CHAT_ID || secrets.TELEGRAM_CHAT_ID }}
           MATCH_DATE: ${{ env.MATCH_DATE }}
           MATCH_WEEKDAY: ${{ env.MATCH_WEEKDAY }}
         run: |
@@ -35,6 +35,8 @@ jobs:
           import json
           import os
           import urllib.request
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
 
           bot_token = os.environ["TELEGRAM_BOT_TOKEN"].strip()
           chat_id = os.environ["TELEGRAM_CHAT_ID"].strip()
@@ -44,23 +46,108 @@ jobs:
           if not bot_token or not chat_id:
               raise ValueError("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID.")
 
-          # Fetch Barcelona (Poblenou) forecast for tomorrow at 18:00 (free, no API key)
+          tz = ZoneInfo("Europe/Madrid")
+          tomorrow = datetime.now(tz).date() + timedelta(days=1)
+          target_local_iso = f"{tomorrow.isoformat()}T18:00"
+          target_utc_iso = (
+              datetime(tomorrow.year, tomorrow.month, tomorrow.day, 18, 0, tzinfo=tz)
+              .astimezone(ZoneInfo("UTC"))
+              .strftime("%Y-%m-%dT%H:00:00Z")
+          )
+
+          def wmo_to_emoji(code: int) -> str:
+              if code == 0:
+                  return "☀️"
+              if code in (1, 2):
+                  return "⛅"
+              if code == 3:
+                  return "☁️"
+              if code in (45, 48):
+                  return "🌫️"
+              if code in (71, 73, 75, 77, 85, 86):
+                  return "❄️"
+              if code in (95, 96, 99):
+                  return "⛈️"
+              if code in (51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82):
+                  return "🌧️"
+              return "🌤️"
+
+          def met_symbol_to_emoji(symbol: str) -> str:
+              s = symbol.lower()
+              if "thunder" in s:
+                  return "⛈️"
+              if "snow" in s or "sleet" in s:
+                  return "❄️"
+              if "rain" in s:
+                  return "🌧️"
+              if "fog" in s:
+                  return "🌫️"
+              if "partlycloudy" in s or "fair" in s:
+                  return "⛅"
+              if "cloudy" in s:
+                  return "☁️"
+              if "clearsky" in s:
+                  return "☀️"
+              return "🌤️"
+
+          def format_wind(wind_kmh: float) -> str:
+              if wind_kmh >= 25:
+                  return f"💨 {wind_kmh:.0f} km/h (windy!)"
+              return f"💨 {wind_kmh:.0f} km/h"
+
+          def fetch_json(url: str) -> dict:
+              req = urllib.request.Request(
+                  url,
+                  headers={"User-Agent": "padel7-reminder-bot/1.0 (github-actions)"},
+              )
+              with urllib.request.urlopen(req, timeout=10) as resp:
+                  return json.loads(resp.read().decode())
+
           weather_line = ""
+
+          # 1. Primary: Open-Meteo (wind_speed_10m is returned in km/h by default)
           try:
-              weather_url = (
+              om_url = (
                   "https://api.open-meteo.com/v1/forecast"
                   "?latitude=41.4036&longitude=2.1969"
-                  "&hourly=temperature_2m,precipitation_probability"
+                  "&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m"
                   "&timezone=Europe%2FMadrid&forecast_days=2"
               )
-              with urllib.request.urlopen(weather_url, timeout=10) as w_resp:
-                  w_data = json.loads(w_resp.read().decode())
-                  # Index 42 = tomorrow at 18:00 (24h today + 18h tomorrow)
-                  temp = w_data["hourly"]["temperature_2m"][42]
-                  rain_prob = w_data["hourly"]["precipitation_probability"][42]
-                  weather_line = f"🌤️ <b>Forecast (18:00):</b> {temp:.0f}°C · {rain_prob}% chance of rain\n"
-          except Exception:
-              pass
+              w_data = fetch_json(om_url)
+              times = w_data["hourly"]["time"]
+              idx = times.index(target_local_iso)
+              temp = w_data["hourly"]["temperature_2m"][idx]
+              rain_prob = w_data["hourly"]["precipitation_probability"][idx]
+              wind_kmh = w_data["hourly"]["wind_speed_10m"][idx]
+              emoji = wmo_to_emoji(int(w_data["hourly"]["weather_code"][idx]))
+              weather_line = (
+                  f"{emoji} <b>Forecast (18:00h):</b> "
+                  f"{temp:.0f}°C · {rain_prob}% rain · {format_wind(wind_kmh)}\n"
+              )
+          except Exception as e:
+              print(f"Open-Meteo failed ({e}), trying MET Norway fallback...")
+
+          # 2. Fallback: MET Norway (wind_speed is returned in m/s -> multiply by 3.6 for km/h)
+          if not weather_line:
+              try:
+                  met_url = "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=41.4036&lon=2.1969"
+                  met_data = fetch_json(met_url)
+                  for entry in met_data["properties"]["timeseries"]:
+                      if entry["time"] == target_utc_iso:
+                          details = entry["data"]["instant"]["details"]
+                          temp = details["air_temperature"]
+                          wind_kmh = details.get("wind_speed", 0.0) * 3.6
+                          next_1h = entry["data"].get("next_1_hours", {})
+                          rain_mm = next_1h.get("details", {}).get("precipitation_amount", 0.0)
+                          symbol = next_1h.get("summary", {}).get("symbol_code", "")
+                          emoji = met_symbol_to_emoji(symbol)
+                          weather_line = (
+                              f"{emoji} <b>Forecast (18:00h):</b> "
+                              f"{temp:.0f}°C · {rain_mm:.1f} mm rain · {format_wind(wind_kmh)}\n"
+                          )
+                          break
+              except Exception as e:
+                  print(f"MET Norway fallback also failed: {e}")
 
           text = (
               f"⏰ <b>Reminder: Pádel Tomorrow ({weekday} {date_str})!</b> 🎾\n\n"
