@@ -1,0 +1,94 @@
+name: "[Scheduled] Monday match-eve Telegram reminder"
+
+on:
+  schedule:
+    # Runs every Monday at 17:00 UTC (18:00 CET / 19:00 CEST in Barcelona)
+    - cron: "0 18 * * MON"
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: "Send to test chat instead of the prod group"
+        type: boolean
+        default: true
+
+jobs:
+  send_reminder:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set Tomorrow's Date Variables
+        run: |
+          MATCH_DATE=$(TZ="Europe/Madrid" date -d "+1 day" +"%d/%m/%Y")
+          MATCH_WEEKDAY=$(TZ="Europe/Madrid" date -d "+1 day" +"%A")
+          echo "Match date: $MATCH_WEEKDAY $MATCH_DATE"
+          echo "MATCH_DATE=$MATCH_DATE" >> "$GITHUB_ENV"
+          echo "MATCH_WEEKDAY=$MATCH_WEEKDAY" >> "$GITHUB_ENV"
+
+      - name: Send Telegram Reminder
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ (github.event_name == 'workflow_dispatch' && inputs.test_mode) && vars.TELEGRAM_TEST_CHAT_ID || vars.TELEGRAM_PROD_CHAT_ID }}
+          MATCH_DATE: ${{ env.MATCH_DATE }}
+          MATCH_WEEKDAY: ${{ env.MATCH_WEEKDAY }}
+        run: |
+          python3 - << 'EOF'
+          import json
+          import os
+          import urllib.request
+
+          bot_token = os.environ["TELEGRAM_BOT_TOKEN"].strip()
+          chat_id = os.environ["TELEGRAM_CHAT_ID"].strip()
+          weekday = os.environ["MATCH_WEEKDAY"]
+          date_str = os.environ["MATCH_DATE"]
+
+          if not bot_token or not chat_id:
+              raise ValueError("Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID.")
+
+          # Fetch Barcelona (Poblenou) forecast for tomorrow at 18:00 (free, no API key)
+          weather_line = ""
+          try:
+              weather_url = (
+                  "https://api.open-meteo.com/v1/forecast"
+                  "?latitude=41.4036&longitude=2.1969"
+                  "&hourly=temperature_2m,precipitation_probability"
+                  "&timezone=Europe%2FMadrid&forecast_days=2"
+              )
+              with urllib.request.urlopen(weather_url, timeout=10) as w_resp:
+                  w_data = json.loads(w_resp.read().decode())
+                  # Index 42 = tomorrow at 18:00 (24h today + 18h tomorrow)
+                  temp = w_data["hourly"]["temperature_2m"][42]
+                  rain_prob = w_data["hourly"]["precipitation_probability"][42]
+                  weather_line = f"🌤️ <b>Forecast (18:00):</b> {temp:.0f}°C · {rain_prob}% chance of rain\n"
+          except Exception:
+              pass
+
+          text = (
+              f"⏰ <b>Reminder: Pádel Tomorrow ({weekday} {date_str})!</b> 🎾\n\n"
+              "━━━━━━━━━━━━━━━\n"
+              "🕕 <b>Time:</b> 18:00 – 19:30\n"
+              "📍 <b>Location:</b> Padel7 Poblenou\n"
+              f"{weather_line}"
+              "━━━━━━━━━━━━━━━\n\n"
+              "🔄 <b>Can't make it?</b> Let the group know ASAP and find a replacement!"
+          )
+
+          payload = json.dumps({
+              "chat_id": chat_id,
+              "text": text,
+              "parse_mode": "HTML",
+              "disable_web_page_preview": True,
+          }).encode("utf-8")
+
+          req = urllib.request.Request(
+              f"https://api.telegram.org/bot{bot_token}/sendMessage",
+              data=payload,
+              headers={"Content-Type": "application/json"},
+              method="POST",
+          )
+
+          with urllib.request.urlopen(req, timeout=15) as resp:
+              body = json.loads(resp.read().decode())
+              if not body.get("ok"):
+                  raise RuntimeError(f"Telegram API error: {body}")
+              print("Monday reminder sent successfully!")
+          EOF
