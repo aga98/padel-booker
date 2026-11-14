@@ -1,0 +1,25 @@
+.github/workflows/monday-match-reminder.yaml.yml
+  s_14a66003e604d2::t_2e1437cf826504 1-2,4,6-12,15-71,73-94
+  h_cc4da17930ae27 3,5,13-14,72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "19a53b1cef0d8cf59ddcddc33ae30ee4e13f380c",
+  "prompts": {},
+  "humans": {
+    "h_cc4da17930ae27": {
+      "author": "Alberto Gimenez <algimeneza@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_14a66003e604d2": {
+      "agent_id": {
+        "tool": "github-copilot-jetbrains",
+        "id": "1794595323909",
+        "model": "unknown"
+      },
+      "human_author": "Alberto Gimenez <algimeneza@gmail.com>"
+    }
+  }
+}
