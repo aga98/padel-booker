@@ -61,6 +61,21 @@ tasks:
         {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
         --no-dry-run {{.CLI_ARGS}}
 
+  docker:check-balance:
+    desc: Check current Padel7 account credit and notify Telegram
+    dir: padel7_booking_bot
+    cmds:
+      - mkdir -p screenshots logs
+      - docker run --rm --env-file .env -v $(pwd)/screenshots:/app/screenshots -v $(pwd)/logs:/app/logs {{.IMAGE_NAME}}:{{.IMAGE_TAG}} --check-balance --notifications
+
+  docker:check-balance-dry-run:
+    desc: Check current Padel7 account credit and notify Telegram
+    dir: padel7_booking_bot
+    cmds:
+      - mkdir -p screenshots logs
+      - docker run --rm --env-file .env -v $(pwd)/screenshots:/app/screenshots -v $(pwd)/logs:/app/logs {{.IMAGE_NAME}}:{{.IMAGE_TAG}} --check-balance --dry-run --notifications
+
+
   clean:
     desc: Clear saved screenshots and logs
     dir: padel7_booking_bot

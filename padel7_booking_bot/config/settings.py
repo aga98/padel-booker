@@ -27,6 +27,9 @@ LOGIN_USERNAME_FIELD_ID = "ContentPlaceHolderContenido_Login1_UserName"
 LOGIN_PASSWORD_FIELD_ID = "ContentPlaceHolderContenido_Login1_Password"
 LOGIN_BUTTON_ID = "ContentPlaceHolderContenido_Login1_LoginButton"
 
+BALANCE_AMOUNT_LABEL_ID = "ContentPlaceHolderContenido_ContentPlaceHolderContenido_WUCWidgetSaldo_LabelImporte"
+
+
 # VENUE SETTINGS
 VENUES = {
     "glories": {

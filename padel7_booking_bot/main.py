@@ -1,12 +1,14 @@
 import os
 import logging
 import time
-import config.settings as settings
-import bot.utils as utils
-import bot.notifications as notifications
 import argparse
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+import config.settings as settings
+import bot.utils as utils
+import bot.notifications as notifications
+import bot.balance as balance
 from bot.login import login_to_site
 from bot.booking import book_court
 from bot.types import CourtPreferences
@@ -35,7 +37,11 @@ def wait_until_time(target_time_str: str) -> None:
     logging.info("Target time reached, proceeding.")
 
 
-def main(court_preferences: CourtPreferences, env: settings.AppSettings) -> None:
+def main(
+        court_preferences: CourtPreferences,
+        env: settings.AppSettings,
+        check_balance: bool = False,
+) -> None:
     utils.setup_logging()
     logging.debug("Starting the Padel7 booking bot.")
 
@@ -47,27 +53,37 @@ def main(court_preferences: CourtPreferences, env: settings.AppSettings) -> None
     driver = login_to_site(env.app_username, env.app_password, env.env)
     logging.info("Login successful with the username: %s", env.app_username)
 
-    logging.debug("Attempting to book a court with preferences: %s", court_preferences)
-    booking_details, booking_successful = book_court(driver, court_preferences)
-    if booking_successful:
-        logging.info("Court booked successfully!")
-    else:
-        logging.error("Court booking failed.")
-        logging.debug("Booking details: %s", booking_details)
-
-    if "driver" in locals():
+    try:
+        if check_balance:
+            current_balance = balance.get_account_balance(driver)
+        else:
+            logging.debug("Attempting to book a court with preferences: %s", court_preferences)
+            booking_details, booking_successful = book_court(driver, court_preferences)
+            if booking_successful:
+                logging.info("Court booked successfully!")
+            else:
+                logging.error("Court booking failed.")
+                logging.debug("Booking details: %s", booking_details)
+    finally:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         utils.save_screenshot(driver, f"final_state_{timestamp}.png")
         driver.quit()
 
     if settings.NOTIFICATION_ENABLED:
         chat_id = env.app_telegram_test_chat_id if settings.DRY_RUN else env.app_telegram_prod_chat_id
-        notifications.send_booking_notification(
-            env.app_telegram_bot_token,
-            chat_id,
-            booking_details,
-            booking_successful,
-        )
+        if check_balance:
+            notifications.send_balance_notification(
+                env.app_telegram_bot_token,
+                chat_id,
+                current_balance,
+            )
+        else:
+            notifications.send_booking_notification(
+                env.app_telegram_bot_token,
+                chat_id,
+                booking_details,
+                booking_successful,
+            )
 
 
 if __name__ == "__main__":
@@ -120,6 +136,12 @@ if __name__ == "__main__":
         metavar="HH:MM:SS",
         help="Wait until this exact time (Europe/Madrid) before running, e.g. 00:00:00.",
     )
+    parser.add_argument(
+        "--check-balance",
+        action="store_true",
+        help="Check current account credit and send a Telegram summary instead of booking.",
+        default=False,
+    )
 
     args = parser.parse_args()
 
@@ -142,4 +164,4 @@ if __name__ == "__main__":
         "booked_by": env.app_username.split("@")[0],
     }
 
-    main(court_preferences, env)
+    main(court_preferences, env, check_balance=args.check_balance)
