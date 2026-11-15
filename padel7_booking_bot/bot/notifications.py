@@ -99,14 +99,19 @@ def _build_balance_message(
         )
 
     return (
-        "💳 <b>PADEL7 WALLET STATUS</b> 💳\n\n"
+        "🤖 <b>PADEL7 BOT WALLET STATUS</b> 💳\n"
+        "<i>Shared balance used by the bot to book our courts automatically:</i>\n\n"
         "━━━━━━━━━━━━━━━\n"
         f"💰 <b>Current Credit:</b> €{balance:.2f}\n"
         f"🏟️ <b>Indoor Courts (€{indoor_cost:.0f}):</b> {indoor_courts} "
         f"<i>(€{remainder:.2f} left over)</i>\n"
         f"☀️ <b>Outdoor Courts (€{outdoor_cost:.0f}):</b> {outdoor_courts}\n"
         "━━━━━━━━━━━━━━━\n\n"
-        f"{status_line}"
+        f"{status_line}\n\n"
+        "⏰ <b>Booking runs soon!</b> The bot will try to reserve our courts tonight at midnight.\n"
+        "💸 <b>Haven't paid yet?</b> If you're playing, please top up <b>€12.00</b> in "
+        '<a href="https://padel7santmarti.com/Login.aspx">Padel7 ("Control de Saldo")</a> '
+        "ASAP so the bot has enough credit!"
     )
 
 

@@ -12,7 +12,7 @@ IMAGE_NAME = "padel7-booking-bot:0.0.1"
 @dag(
     dag_id="padel7_balance_check",
     start_date=datetime(2026, 8, 20, tzinfo=pendulum.timezone("Europe/Madrid")),
-    schedule=CronTriggerTimetable("0 20 * * FRI", timezone="Europe/Madrid"),
+    schedule=CronTriggerTimetable("0 14 * * FRI", timezone="Europe/Madrid"),
     catchup=False,
     default_args={
         "retries": 2,
