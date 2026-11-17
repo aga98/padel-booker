@@ -2,8 +2,8 @@ name: "[Scheduled] Monday match-eve Telegram reminder"
 
 on:
   schedule:
-    # Runs every Monday at 18:00 UTC (19:00 CET / 20:00 CEST in Barcelona)
-    - cron: "0 18 * * MON"
+    # Runs every Monday at 14:00 UTC (15:00 CET / 16:00 CEST in Barcelona)
+    - cron: "0 14 * * MON"
   workflow_dispatch:
     inputs:
       test_mode:
