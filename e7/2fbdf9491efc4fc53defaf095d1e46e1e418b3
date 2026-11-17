@@ -1,0 +1,14 @@
+.github/workflows/monday-match-reminder.yaml.yml
+  h_cc4da17930ae27 5-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e72fbdf9491efc4fc53defaf095d1e46e1e418b3",
+  "prompts": {},
+  "humans": {
+    "h_cc4da17930ae27": {
+      "author": "Alberto Gimenez <algimeneza@gmail.com>"
+    }
+  }
+}
